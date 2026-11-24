@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bujji</title>
+<script>window.MathJax={svg:{fontCache:"local"},startup:{typeset:false}};</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{--bg:#02060d;--fg:#9fefff;--dim:#5b8da0;color-scheme:dark;box-sizing:border-box}
+html{height:100%}
+body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:300 14px/1.5 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+#bar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;right:12px;z-index:5;display:flex;gap:8px;align-items:center;justify-content:space-between;pointer-events:none}
+#bar>*{pointer-events:auto}
+#tx{flex:1;min-width:0;max-width:420px;box-sizing:border-box;background:rgba(6,22,34,.85);color:var(--fg);border:1px solid rgba(60,240,255,.3);border-radius:8px;padding:7px 10px;font:inherit;font-size:13px;-webkit-user-select:text;user-select:text}
+#ctrl{display:flex;gap:6px;align-items:center;flex-shrink:0}
+#lang,#cfgBtn{background:rgba(6,22,34,.85);color:var(--fg);border:1px solid rgba(60,240,255,.3);border-radius:8px;padding:6px 9px;font:inherit;font-size:13px;cursor:pointer}
+#lang{max-width:34vw}
+#cfgBtn.need{border-color:#ffb040;color:#ffd080;box-shadow:0 0 10px rgba(255,176,64,.25)}
+#ui{position:fixed;left:0;right:0;bottom:0;padding:0 24px calc(env(safe-area-inset-bottom,0px) + 6vh);text-align:center;pointer-events:none}
+#name{letter-spacing:.7em;margin-right:-.7em;font-weight:200;font-size:15px;opacity:.85}
+#cap{max-height:7.5em;overflow-y:auto;-webkit-overflow-scrolling:touch;pointer-events:auto;min-height:3.2em;margin:14px auto 0;max-width:36em;color:var(--dim);font-size:15px;white-space:pre-line;-webkit-user-select:text;user-select:text;scrollbar-width:thin}
+#sheet{position:fixed;left:12px;right:12px;top:35vh;bottom:var(--uih,160px);max-width:900px;margin:0 auto;overflow-y:auto;padding:14px 16px;border:1px solid rgba(60,240,255,.28);border-radius:14px;background:rgba(6,22,34,.84);color:#e6fbff;-webkit-user-select:text;user-select:text}
+#sheet[hidden]{display:none}
+#sheet h2{margin:0 0 6px;font-weight:300;font-size:17px;letter-spacing:.12em;text-transform:uppercase;color:var(--fg)}
+#sheet h3{margin:16px 0 6px;padding-bottom:4px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#4fd8ff;border-bottom:1px solid rgba(60,240,255,.2)}
+#sheet .r{display:grid;grid-template-columns:minmax(70px,36%) 1fr;gap:12px;align-items:center;padding:6px 0}
+#sheet .l{color:var(--dim);font-size:13px}
+#sheet .n{margin-top:4px;font-size:13.5px;line-height:1.6;color:#cfeff7;white-space:pre-line}
+#sheet .f{overflow-x:auto;overflow-y:hidden}
+#sheet mjx-container{margin:0!important}
+.sh #name{display:none}
+#links{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:14px;pointer-events:auto}
+#links a{padding:7px 12px;border:1px solid rgba(60,240,255,.4);border-radius:18px;background:rgba(6,22,34,.85);color:var(--fg);text-decoration:none;font-size:13px}
+#modal{position:fixed;inset:0;z-index:20;background:rgba(2,6,13,.78);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;-webkit-user-select:text;user-select:text}
+#modal[hidden]{display:none}
+#card{width:100%;max-width:460px;max-height:88vh;overflow-y:auto;background:rgba(6,22,34,.96);border:1px solid rgba(60,240,255,.35);border-radius:16px;padding:18px;box-sizing:border-box;color:#dff7ff}
+#card h2{margin:0 0 12px;font-size:15px;letter-spacing:.15em;text-transform:uppercase;font-weight:400;color:var(--fg)}
+#card label{display:block;font-size:12px;color:var(--dim);margin:10px 0 4px}
+#card input,#card select,#card textarea{width:100%;box-sizing:border-box;background:rgba(2,10,18,.9);color:var(--fg);border:1px solid rgba(60,240,255,.28);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px}
+#card textarea{min-height:60px;resize:vertical}
+.row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.row>*{flex:1}
+.btn{background:rgba(40,170,255,.18);color:var(--fg);border:1px solid rgba(60,240,255,.4);border-radius:8px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer}
+.btn.pri{background:rgba(60,240,255,.26);font-weight:500}
+.btn.warn{border-color:rgba(255,130,100,.45);color:#ffb8a8;background:rgba(255,90,60,.12)}
+.hint{font-size:12px;color:var(--dim);margin-top:6px;line-height:1.45}
+.hint a{color:#66e3ff}
+#memBox{margin-top:6px;max-height:95px;overflow-y:auto;font-size:12px;color:#bdeeff;background:rgba(2,10,18,.6);border:1px solid rgba(60,240,255,.18);border-radius:8px;padding:6px 8px}
+#statusMsg{font-size:12px;margin-top:8px;min-height:1.2em;color:#8fffa8}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="sheet" hidden></div>
+
+<div id="bar">
+  <input id="tx" type="text" placeholder="Talk or type to Bujji…" autocomplete="off" enterkeyhint="send">
+  <div id="ctrl">
+    <select id="lang" aria-label="Language"></select>
+    <button id="cfgBtn" type="button" title="API Key & Personalization">⚙ Setup</button>
+  </div>
+</div>
+
+<div id="ui"><div id="links"></div><div id="name">B.U.J.J.I</div><div id="cap"></div></div>
+
+<div id="modal" hidden>
+  <div id="card">
+    <h2>API Key & Personalization</h2>
+
+    <label for="mProv">AI Provider</label>
+    <select id="mProv">
+      <option value="gemini">Google Gemini (Free tier available)</option>
+      <option value="groq">Groq (Fast free tier)</option>
+      <option value="openrouter">OpenRouter</option>
+      <option value="openai">OpenAI</option>
+    </select>
+    <div class="hint" id="provHint"></div>
+
+    <label for="mKey">Your Personal API Key</label>
+    <div class="row" style="margin-top:0">
+      <input id="mKey" type="password" placeholder="Paste API key here…" autocomplete="off">
+      <button id="mTest" type="button" class="btn" style="flex:0 0 auto">Test &amp; Detect</button>
+    </div>
+
+    <label for="mMod">Model (optional — leave blank for auto)</label>
+    <input id="mMod" type="text" placeholder="Auto-selected best model">
+
+    <h2 style="margin-top:18px">Personalize Bujji</h2>
+    <div class="row" style="margin-top:0">
+      <div>
+        <label for="mName">Your Name</label>
+        <input id="mName" type="text" placeholder="e.g., Arjun">
+      </div>
+      <div>
+        <label for="mTone">Personality</label>
+        <select id="mTone">
+          <option value="warm">Warm &amp; Natural</option>
+          <option value="casual">Casual &amp; Witty</option>
+          <option value="mentor">Calm Mentor</option>
+          <option value="concise">Short &amp; Direct</option>
+        </select>
+      </div>
+    </div>
+
+    <label for="mAbout">About You (interests, work, preferences)</label>
+    <textarea id="mAbout" placeholder="e.g., I'm a college CS student, love sci-fi, prefer simple explanations without jargon."></textarea>
+
+    <label for="mVoice">Voice Gender</label>
+    <select id="mVoice">
+      <option value="male">Male</option>
+      <option value="female">Female</option>
+    </select>
+
+    <label>What Bujji Remembers About You</label>
+    <div id="memBox">No saved memories yet.</div>
+    <div class="row">
+      <button id="clrMem" type="button" class="btn warn">Clear Memories</button>
+      <button id="clrHist" type="button" class="btn warn">Clear Chat History</button>
+    </div>
+
+    <div id="statusMsg"></div>
+    <div class="row" style="margin-top:12px">
+      <button id="mSave" type="button" class="btn pri">Save &amp; Apply</button>
+      <button id="mClose" type="button" class="btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var cv=document.getElementById("c"),g=cv.getContext("2d"),cap=document.getElementById("cap");
+var W=0,H=0,state="idle",lvl=0,bump=0,t0=performance.now();
+var COL={idle:[40,170,255],listen:[60,240,255],think:[255,176,64],speak:[120,255,190]};
+var cur=COL.idle.slice(),P=[];
+for(var q=0;q<48;q++)P.push({a:Math.random()*6.283,r:Math.random(),s:.2+Math.random()*.6});
+function size(){var D=Math.min(window.devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*D;cv.height=H*D;g.setTransform(D,0,0,D,0,0)}
+var uiEl=document.getElementById("ui");
+function fit(){document.documentElement.style.setProperty("--uih",(uiEl.offsetHeight+12)+"px")}
+try{new ResizeObserver(fit).observe(uiEl)}catch(e){}
+addEventListener("resize",fit);fit();
+addEventListener("resize",size);size();
+cv.addEventListener("pointerdown",function(){if(speaking||busy){stopTalk();say("Stopped. Tap anywhere or speak.")}});
+function rgba(a){return "rgba("+Math.round(cur[0])+","+Math.round(cur[1])+","+Math.round(cur[2])+","+a+")"}
+
+/* ---------- storage & personalization ---------- */
+function jget(k,def){try{var v=localStorage.getItem(k);return v?JSON.parse(v):def}catch(e){return def}}
+function jset(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function KEY(){return jget("jk",null)}
+function PROF(){return jget("jp",{name:"",about:"",tone:"warm"})}
+function MEM(){return jget("jm",[])}
+function addMem(m){
+  m=String(m||"").trim();if(!m||m.length<4)return;
+  var a=MEM(),low=m.toLowerCase();
+  if(a.some(function(x){return x.toLowerCase()===low}))return;
+  a.push(m);if(a.length>20)a=a.slice(-20);
+  jset("jm",a);renderMem()
+}
+
+var hist=jget("jh",[]);
+function pushHist(userMsg,aiMsg){
+  hist.push(["User",userMsg],["Bujji",aiMsg]);
+  if(hist.length>16)hist=hist.slice(-16);
+  jset("jh",hist)
+}
+
+var TONES={
+  warm:"Warm, perceptive, supportive, and naturally conversational—like a close, smart friend.",
+  casual:"Relaxed, witty, upbeat, and informal—chat naturally like a good buddy.",
+  mentor:"Calm, grounded, thoughtful, and encouraging—clear and reassuring.",
+  concise:"Crisp, natural, and straight to the point without fluff, while still friendly."
+};
+
+function buildSys(){
+  var p=PROF(),m=MEM();
+  var out='You are Bujji, a natural, personalized voice AI companion—NOT a search engine or encyclopaedia. Talk like a real, attentive person having a genuine conversation.\n';
+  out+='Personality: '+(TONES[p.tone]||TONES.warm)+'\n';
+  if(p.name)out+='The user’s name is '+p.name+'. Use their name occasionally and naturally, not in every sentence.\n';
+  if(p.about)out+='About the user: '+p.about+'\n';
+  if(m.length)out+='Remembered context from past chats:\n- '+m.join('\n- ')+'\n';
+  out+='Preferred reply language: '+(LANG?LANG:'same language as the user')+'. Always reply in that language’s native script.\n';
+  out+='Reply with ONLY one valid JSON object using these keys:\n';
+  out+='{"lang":"BCP-47 code e.g. en-IN, hi-IN, te-IN","speech":"...","memory":"","links":[],"pdf":false,"sheet":null}\n';
+  out+='Rules:\n';
+  out+='- "speech": What you say aloud. Natural spoken sentences, no markdown, no asterisks, no URLs, never say your own name needlessly. Keep casual replies short (1-3 sentences) and deeper answers clear and engaging (3-7 sentences).\n';
+  out+='- "memory": If the user shares a lasting personal detail, preference, goal, or fact worth remembering later, write ONE short note (e.g. "Prefers Python examples" or "Preparing for interviews next month"); otherwise "".\n';
+  out+='- "links": Leave [] by default! Do NOT act like a search engine. Only include 1-3 links {"k":"video|web|map|image","q":"query","t":"label"} if the user explicitly asks for links, videos, places, or recommendations to open.\n';
+  out+='- "sheet": Leave null for normal conversation, advice, greetings, and quick Q&A. Only fill "sheet": {"title":"...","sections":[{"h":"...","items":[{"l":"...","t":"pure LaTeX math or empty string","n":"short explanation"}]}]} when the user specifically asks for a formula sheet, study notes, step-by-step derivation, or PDF.\n';
+  out+='- "pdf": true only if the user explicitly asks to export/download a PDF.';
+  return out;
+}
+
+/* ---------- voice engine ---------- */
+var SR=window.SpeechRecognition||window.webkitSpeechRecognition,rec=null,micOK=true;
+var speaking=false,busy=false,qu=0,sample=null,last=null,dl=null;
+var WAKE=/\b(bujji|buji|bujjy|bhujji|bhuji|bujjee|bunji|boojji)\b[\s,.:!?-]*/i;
+
+function useCap(n){try{if(window.claude&&typeof window.claude.use==="function")return Promise.resolve(window.claude.use(n))}catch(e){}return Promise.resolve(null)}
+function say(txt){cap.style.opacity=1;cap.textContent=txt}
+
+function recLang(){return LANG||navigator.language||"en-IN"}
+function listen(){
+  if(!SR){say("Voice recognition isn’t available here. Type below or open in Chrome.");return}
+  rec=new SR();rec.continuous=true;rec.interimResults=true;rec.lang=recLang();
+  rec.onresult=function(e){
+    for(var i=e.resultIndex;i<e.results.length;i++)hear(e.results[i][0].transcript,e.results[i].isFinal)
+  };
+  rec.onerror=function(e){
+    if(e.error==="not-allowed"||e.error==="service-not-allowed"){micOK=false;say("Microphone is blocked. Allow mic access or type above.")}
+  };
+  rec.onstart=function(){live=true};
+  rec.onend=function(){live=false;if(micOK)setTimeout(start,200)};
+  start()
+}
+function start(){try{rec.lang=recLang();rec.start()}catch(e){}}
+
+function isStop(z){
+  z=z.replace(/\b(please|talking|speaking|now|it|bujji|buji|bujjy|just|be)\b/g,"").replace(/\s+/g," ").trim();
+  return STOP.test(z)
+}
+function echo(tx){
+  var s=(sp.said||"").toLowerCase(),w=tx.toLowerCase().replace(/[.!?,।]/g,"").split(/\s+/).filter(Boolean);
+  if(!w.length)return true;
+  var n=0;w.forEach(function(x){if(s.indexOf(x)>=0)n++});
+  return n/w.length>=.6
+}
+function heard(tx){
+  var m=tx.match(WAKE);if(m&&m.index>8)m=null;
+  var cmd=m?tx.slice(m.index+m[0].length).trim():tx.trim();
+  if(speaking)stopTalk();
+  if(!cmd){reply("Yes? I'm listening.");return}
+  act(cmd)
+}
+
+var TD=/^(what(.s| is) )?(the )?(current )?(time|date|day)( is it| today| now)?$|what time is it|what day is it|what.s today.s date/;
+var PK={whatsapp:"com.whatsapp",youtube:"com.google.android.youtube",instagram:"com.instagram.android",chrome:"com.android.chrome",telegram:"org.telegram.messenger",spotify:"com.spotify.music",phonepe:"com.phonepe.app",gpay:"com.google.android.apps.nbu.paisa.user","google pay":"com.google.android.apps.nbu.paisa.user",paytm:"net.one97.paytm",gmail:"com.google.android.gm",maps:"com.google.android.apps.maps","google maps":"com.google.android.apps.maps",facebook:"com.facebook.katana",snapchat:"com.snapchat.android",amazon:"in.amazon.mShop.android.shopping",flipkart:"com.flipkart.android",netflix:"com.netflix.mediaclient"},PA={settings:"android.settings.SETTINGS",camera:"android.media.action.IMAGE_CAPTURE",wifi:"android.settings.WIFI_SETTINGS",bluetooth:"android.settings.BLUETOOTH_SETTINGS"};
+function phoneLinks(a){var box=document.getElementById("links");box.innerHTML="";a.forEach(function(x){var el=document.createElement("a");el.href=x[1];el.textContent=x[0];el.onclick=function(ev){ev.preventDefault();var u=x[1];[function(){window.top.location.href=u},function(){window.location.href=u},function(){window.open(u,"_blank")}].some(function(f){try{f();return 1}catch(e){return 0}});if(/^tel:/.test(u)){var n=u.slice(4);try{navigator.clipboard.writeText(n)}catch(e){}reply("If the dialer did not open, dial "+n+". I copied the number.")}};box.appendChild(el)})}
+var DW={zero:0,oh:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9};
+function hd(w){return Object.prototype.hasOwnProperty.call(DW,w)}
+function dw(w){return hd(w)||/^\+?\d+$/.test(w)||w==="double"||w==="triple"||w==="plus"}
+function dg(s){var o="",r=1,p=s.trim().split(/[\s-]+/);for(var i=0;i<p.length;i++){var w=p[i];if(w==="double")r=2;else if(w==="triple")r=3;else if(w==="plus")o+="+";else if(hd(w)){o+=String(DW[w]).repeat(r);r=1}else if(/^\+?\d+$/.test(w)){o+=w;r=1}else return ""}return o.length>=3?o:""}
+function phoneCmd(l){
+  var m,C={};try{C=JSON.parse(localStorage.getItem("jc")||"{}")}catch(e){}
+  if((m=l.match(/^save contact (.+)$/))){var w=m[1].split(/\s+/),i=w.length;while(i>0&&dw(w[i-1]))i--;var nm=w.slice(0,i).join(" "),nb=dg(w.slice(i).join(" "));if(nm&&nb.length>=7){C[nm]=nb;try{localStorage.setItem("jc",JSON.stringify(C))}catch(e){}return{speech:"Saved "+nm+". Say call "+nm+" anytime."}}return{speech:"Say: save contact, then a name, then the number."}}
+  if(/^(answer|pick up|lift|accept|receive)( the| my| this)?( incoming)? (call|phone)$/.test(l))return{speech:"A web page can't answer calls. Use your phone's answer button."};
+  if((m=l.match(/^(?:call|dial|phone|ring) (.+)$/))){var t=m[1].trim(),n=C[t]||dg(t);
+    if(!n)return{speech:"I don't have a number for "+t+". Say save contact "+t+" followed by the number."};
+    return{speech:"Tap the call button to dial "+t+".",links:[["📞 Call "+t,"tel:"+n]]}}
+  if((m=l.match(/^(?:open|launch|start|go to) (.+)$/))){var a=m[1].replace(/^the /,"").replace(/\s*app$/,"").trim();
+    if(/sheet|formula|pdf|panel|setup|settings/.test(a))return null;
+    var h=PA[a]?"intent:#Intent;action="+PA[a]+";end":PK[a]?"intent://#Intent;package="+PK[a]+";end":"https://play.google.com/store/search?q="+encodeURIComponent(a)+"&c=apps";
+    return{speech:"Tap the button to open "+a+".",links:[["📱 Open "+a,h]]}}
+  return null
+}
+
+function act(c){
+  var km=c.match(/^\/key\s+(gemini|groq|openrouter|openai)\s+(\S+)(?:\s+(\S+))?/i);
+  if(km){jset("jk",{p:km[1].toLowerCase(),k:km[2],m:km[3]||""});syncBadge();reply("Saved your "+km[1]+" API key. Let's talk!");return}
+  if(/^\/key\s+off/i.test(c)){try{localStorage.removeItem("jk")}catch(e){}syncBadge();reply("API key removed.");return}
+  var l=c.toLowerCase().replace(/[.!?,]/g,"").trim();
+  if(isStop(l)){stopTalk();say("Stopped.");return}
+  if(VW.test(l)&&l.split(" ").length<9&&(FW.test(l)||MW.test(l))){GEN=FW.test(l)?"female":"male";try{localStorage.setItem("jg",GEN)}catch(e){}reply(GEN==="female"?"Sure, switching to a female voice.":"Sure, switching to a male voice.");return}
+  if(/^(close|hide|dismiss|clear)( the)?( formula)?( sheet| formulas| panel| screen)?$/.test(l)){showSheet(null);reply("Closed.");return}
+  if(/^(show|open|bring up)( the)?( formula)?( sheet| formulas| panel)( again)?$/.test(l)&&last){showSheet(last);reply("Here it is.");return}
+  if(/(^| )(pdf|download|export)( |$)/.test(l)&&last&&l.split(" ").length<5){reply("Preparing your PDF.");pdf(last);return}
+  var ph=phoneCmd(l);if(ph){phoneLinks(ph.links||[]);reply(ph.speech);var fa=document.querySelector("#links a");if(fa)setTimeout(function(){fa.click()},900);return}
+  if(TD.test(l)){
+    var d=new Date();
+    reply(/date|day/.test(l)?"Today is "+d.toLocaleDateString([],{weekday:"long",day:"numeric",month:"long",year:"numeric"})+".":"It is "+d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})+".");
+    return
+  }
+  ask(c)
+}
+
+function mkLinks(a){
+  var box=document.getElementById("links");box.innerHTML="";
+  (Array.isArray(a)?a:[]).slice(0,4).forEach(function(k){
+    var q=String(k&&k.q||"").slice(0,120).trim();if(!q)return;
+    var u=k.k==="video"?"https://www.youtube.com/results?search_query=":k.k==="map"?"https://www.google.com/maps/search/?api=1&query=":k.k==="image"?"https://www.google.com/search?tbm=isch&q=":"https://www.google.com/search?q=";
+    var el=document.createElement("a");el.href=u+encodeURIComponent(q);el.target="_blank";el.rel="noopener noreferrer";
+    el.textContent=(k.k==="video"?"▶ ":k.k==="map"?"📍 ":k.k==="image"?"🖼 ":"🔎 ")+String(k.t||q).slice(0,40);box.appendChild(el)
+  })
+}
+
+/* ---------- AI API engine (Gemini, Groq, OpenRouter, OpenAI) ---------- */
+var DEFAULTS={
+  gemini:["gemini-flash-latest","gemini-3.5-flash-lite","gemini-3-flash-preview","gemini-2.5-flash","gemini-2.0-flash"],
+  groq:["openai/gpt-oss-120b","openai/gpt-oss-20b","llama-3.3-70b-versatile","llama-3.1-8b-instant"],
+  openrouter:["google/gemini-2.5-flash","meta-llama/llama-3.3-70b-instruct:free"],
+  openai:["gpt-4o-mini","gpt-4.1-mini"]
+};
+var ENDPOINTS={
+  groq:"https://api.groq.com/openai/v1/chat/completions",
+  openrouter:"https://openrouter.ai/api/v1/chat/completions",
+  openai:"https://api.openai.com/v1/chat/completions"
+};
+
+async function detectModel(prov,key){
+  if(prov==="gemini"){
+    var r=await fetch("https://generativelanguage.googleapis.com/v1beta/models?key="+encodeURIComponent(key));
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    var d=await r.json(),list=(d.models||[]).filter(function(m){
+      return (m.supportedGenerationMethods||[]).indexOf("generateContent")>=0 && !/tts|image|embedding|veo|lyria|robotics/i.test(m.name);
+    }).map(function(m){return m.name.replace(/^models\//,"")});
+    var flash=list.find(function(n){return /flash-latest|3\.5-flash|3-flash|2\.5-flash|2\.0-flash/i.test(n)})||list.find(function(n){return /flash/i.test(n)})||list[0];
+    if(!flash)throw new Error("No text models found");
+    return flash;
+  }
+  if(prov==="groq"||prov==="openai"){
+    var base=prov==="groq"?"https://api.groq.com/openai/v1/models":"https://api.openai.com/v1/models";
+    var r2=await fetch(base,{headers:{"Authorization":"Bearer "+key}});
+    if(!r2.ok)throw new Error("HTTP "+r2.status);
+    var d2=await r2.json(),l2=(d2.data||[]).map(function(x){return x.id}).filter(function(id){return !/whisper|guard|tts|embed|audio|dall-e/i.test(id)});
+    var pref=l2.find(function(id){return /gpt-oss|llama-3\.3|llama-4|gpt-4o-mini|gpt-4\.1-mini/i.test(id)})||l2[0];
+    if(!pref)throw new Error("No chat models found");
+    return pref;
+  }
+  return DEFAULTS[prov][0];
+}
+
+async function callAI(userMsg){
+  var k=KEY();
+  if(!k||!k.k)throw new Error("NO_KEY");
+  var sys=buildSys();
+  var turns=hist.slice(-12);
+  var models=k.m?[k.m]:(DEFAULTS[k.p]||DEFAULTS.gemini).slice();
+  var lastErr=null;
+
+  for(var i=0;i<models.length;i++){
+    var mod=models[i],ac=new AbortController(),tm=setTimeout(function(){ac.abort()},20000);
+    try{
+      if(k.p==="gemini"){
+        var contents=turns.map(function(h){return{role:h[0]==="User"?"user":"model",parts:[{text:String(h[1])}]}});
+        contents.push({role:"user",parts:[{text:userMsg}]});
+        var res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(mod)+":generateContent?key="+encodeURIComponent(k.k),{
+          method:"POST",signal:ac.signal,headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},contents:contents,generationConfig:{responseMimeType:"application/json",temperature:0.75}})
+        });
+        clearTimeout(tm);
+        if(!res.ok){var et=await res.text().catch(function(){return""});throw new Error("HTTP "+res.status+": "+et.slice(0,120))}
+        var jd=await res.json();
+        var txt=jd.candidates&&jd.candidates[0]&&jd.candidates[0].content&&jd.candidates[0].content.parts.map(function(p){return p.text||""}).join("");
+        return {text:txt||""};
+      }else{
+        var msgs=[{role:"system",content:sys}];
+        turns.forEach(function(h){msgs.push({role:h[0]==="User"?"user":"assistant",content:String(h[1])})});
+        msgs.push({role:"user",content:userMsg});
+        var url=ENDPOINTS[k.p]||ENDPOINTS.openai;
+        var body={model:mod,messages:msgs,temperature:0.75,response_format:{type:"json_object"}};
+        var res2=await fetch(url,{method:"POST",signal:ac.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+k.k},body:JSON.stringify(body)});
+        if(res2.status===400){
+          delete body.response_format;
+          res2=await fetch(url,{method:"POST",signal:ac.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+k.k},body:JSON.stringify(body)});
+        }
+        clearTimeout(tm);
+        if(!res2.ok){var et2=await res2.text().catch(function(){return""});throw new Error("HTTP "+res2.status+": "+et2.slice(0,120))}
+        var jd2=await res2.json();
+        return {text:jd2.choices[0].message.content||""};
+      }
+    }catch(e){
+      clearTimeout(tm);
+      lastErr=e&&e.name==="AbortError"?new Error("Request timed out"):e;
+      if(!/HTTP (404|400)/.test(String(lastErr.message)))throw lastErr;
+    }
+  }
+  // Auto-discover active model if default names returned 404
+  if(!k.m){
+    var found=await detectModel(k.p,k.k);
+    k.m=found;jset("jk",k);
+    return await callAI(userMsg);
+  }
+  throw lastErr||new Error("No working model found");
+}
+
+async function ask(c){
+  if(!KEY()||!KEY().k){
+    reply("Add your Gemini or Groq API key in Setup so we can talk.");
+    openModal();
+    return;
+  }
+  busy=true;say("Thinking…");try{speechSynthesis.cancel()}catch(e){}newSp("");
+  var g=sp.g;
+  try{
+    var out=await callAI(c);
+    if(g!==sp.g)return;
+    var raw=((out&&out.text)||"").replace(/```(json)?/gi,"").trim(),o=null;
+    try{o=JSON.parse(raw.slice(raw.indexOf("{"),raw.lastIndexOf("}")+1))}catch(x){}
+    var a=(o&&o.speech)||(raw&&raw[0]!=="{"?raw:"")||"I missed that—could you say it again?";
+    if(o&&o.lang)sp.lang=o.lang;
+    if(o&&o.memory)addMem(o.memory);
+    pushHist(c,a);
+    var ns=o&&o.sheet&&o.sheet.sections&&o.sheet.sections.length;
+    if(ns)last=o.sheet;
+    mkLinks(o&&o.links);
+    if(o&&o.pdf&&last){if(ns)showSheet(last);await pdf(last,"")}
+    else{
+      say(a);sp.fin=true;enq(a);if(sp.pend<=0)done();
+      if(ns)await showSheet(last)
+    }
+  }catch(e){
+    if(g!==sp.g)return;
+    var msg=String((e&&e.message)||e);
+    if(/401|403|API_KEY_INVALID/i.test(msg))reply("Your API key looks invalid or expired. Check it in Setup.");
+    else if(/429/.test(msg))reply("You hit the free rate limit for a moment. Try again shortly.");
+    else reply("Couldn't reach the AI: "+msg);
+  }
+}
+
+/* ---------- Speech synthesis ---------- */
+var gen=0,sp={n:0,pend:0,fin:false,lang:"",g:0,said:""};
+function newSp(l){sp={n:0,pend:0,fin:false,lang:l||"",g:++gen,said:""}}
+var GEN="male",vHit=false;
+try{GEN=localStorage.getItem("jg")||"male"}catch(e){}
+var FEM=/female|woman|zira|samantha|susan|hazel|aria|jenny|libby|sonia|karen|moira|tessa|fiona|victoria|heera|neerja|swara|veena|lekha|kalpana|priya|shruti/i,MAL=/(^|[^a-z])male|daniel|ryan|george|james|david|mark|guy|ravi|hemant|prabhat|rishi|alex|fred|thomas/i;
+var VW=/voice|speak|talk|sound|आवाज|గొంతు|స్వరం|குரல்|ಧ್ವನಿ|ശബ്ദ|কণ্ঠ/i,FW=/\b(female|woman|girl|lady)\b|महिला|लड़की|औरत|స్త్రీ|అమ్మాయి|ఆడ|பெண்|ಹೆಣ್ಣು|സ്ത്രീ|মহিলা/i,MW=/\b(male|man|boy|guy)\b|पुरुष|लड़का|आदमी|పురుష|అబ్బాయి|మగ|ஆண்|ಗಂಡು|പുരുഷ|পুরুষ/i;
+function voiceFor(l){
+  var all=window.speechSynthesis?speechSynthesis.getVoices():[],lg=(l||"en").toLowerCase(),p=lg.slice(0,2),re=GEN==="female"?FEM:MAL;
+  var pool=all.filter(function(x){return x.lang.toLowerCase().replace("_","-").indexOf(p)===0});
+  pool.sort(function(x,y){function k(v){var c=v.lang.toLowerCase();return c===lg?0:p==="en"&&/^en-gb/.test(c)?1:p==="en"&&/^en-in/.test(c)?2:3}return k(x)-k(y)});
+  var m=pool.find(function(x){return re.test(x.name)});
+  vHit=!!m;return m||pool[0]||null
+}
+if(window.speechSynthesis){speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=function(){speechSynthesis.getVoices()}}
+function done(){speaking=false;busy=false;qu=Date.now()+700}
+function enq(t,l){
+  var sy=window.speechSynthesis;if(!sy||!t||!t.trim())return;
+  var g=sp.g,u=new SpeechSynthesisUtterance(t.trim().replace(/bh?ujj?[iy]/gi,"Boojee")),v=voiceFor(l||sp.lang);
+  if(v)u.voice=v;u.lang=v?v.lang:(l||sp.lang||"en-IN");u.rate=1.04;u.volume=.88;u.pitch=vHit?1:GEN==="female"?1.2:.88;
+  u.onboundary=function(){bump=.35};
+  function fin(){if(g!==sp.g)return;if(--sp.pend<=0&&sp.fin)done()}
+  u.onend=fin;
+  u.onerror=function(e){if(e.error==="not-allowed")say(t+"\n(Tap once so I can speak.)");fin()};
+  sp.said=(sp.said||"")+" "+t;
+  sp.pend++;speaking=true;sy.speak(u)
+}
+function reply(txt,l){
+  say(txt);try{speechSynthesis.cancel()}catch(e){}
+  newSp(l||"en-IN");sp.fin=true;
+  if(!window.speechSynthesis||!txt){done();return}
+  enq(txt)
+}
+function stopTalk(){try{speechSynthesis.cancel()}catch(e){}sp.g=++gen;sp.pend=0;speaking=false;busy=false}
+
+/* ---------- sheet & PDF ---------- */
+var sheetEl=document.getElementById("sheet"),sheetOn=0,mix=0;
+async function mjReady(){
+  for(var i=0;i<100&&!(window.MathJax&&window.MathJax.tex2svgPromise);i++)await new Promise(function(r){setTimeout(r,100)});
+  try{await window.MathJax.startup.promise}catch(e){}
+}
+async function showSheet(sh){
+  if(!sh){sheetOn=0;sheetEl.hidden=true;sheetEl.innerHTML="";document.body.classList.remove("sh");return}
+  sheetOn=1;sheetEl.innerHTML="";
+  var h=document.createElement("h2");h.textContent=sh.title||"Notes";sheetEl.appendChild(h);
+  sheetEl.hidden=false;sheetEl.scrollTop=0;document.body.classList.add("sh");
+  await mjReady();
+  for(var s of sh.sections||[]){
+    var h3=document.createElement("h3");h3.textContent=s.h||"";sheetEl.appendChild(h3);
+    for(var it of s.items||[]){
+      var r=document.createElement("div"),l=document.createElement("span"),f=document.createElement("span");
+      r.className="r";l.className="l";f.className="f";l.textContent=it.l||"";
+      if(it.t){try{f.appendChild(await window.MathJax.tex2svgPromise(it.t))}catch(e){f.textContent=it.t}}
+      if(it.n){var nn=document.createElement("div");nn.className="n";nn.textContent=it.n;f.appendChild(nn)}
+      r.appendChild(l);r.appendChild(f);sheetEl.appendChild(r)
+    }
+  }
+}
+async function texPng(tex,fs){
+  var n=await window.MathJax.tex2svgPromise(tex),s=n.querySelector("svg"),vb=s.getAttribute("viewBox").split(/[ ,]+/).map(Number),k=fs/1000,w=vb[2]*k,h=vb[3]*k;
+  s.setAttribute("width",w);s.setAttribute("height",h);
+  var xml=new XMLSerializer().serializeToString(s).replace(/currentColor/g,"#111");
+  if(!/xmlns="/.test(xml))xml=xml.replace("<svg",'<svg xmlns="http://www.w3.org/2000/svg"');
+  if(/xlink:href/.test(xml)&&!/xmlns:xlink/.test(xml))xml=xml.replace("<svg",'<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+  var img=new Image();
+  await new Promise(function(ok,no){img.onload=ok;img.onerror=no;img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(xml)});
+  var z=3,c=document.createElement("canvas");c.width=Math.ceil(w*z);c.height=Math.ceil(h*z);
+  var x=c.getContext("2d");x.scale(z,z);x.drawImage(img,0,0,w,h);
+  return{u:c.toDataURL("image/png"),w:w,h:h}
+}
+var NA=/[^\x00-\x7f]/;
+function txtPng(str,fs,maxW,col){
+  var z=3,c=document.createElement("canvas"),x=c.getContext("2d"),f=fs+"px system-ui,'Noto Sans',sans-serif";
+  str=String(str||"");x.font=f;
+  var parts=/\s/.test(str)?str.split(/(\s+)/):Array.from(str),lines=[],cur="";
+  parts.forEach(function(w){var tst=cur+w;if(x.measureText(tst).width>maxW&&cur.trim()){lines.push(cur.trim());cur=w.replace(/^\s+/,"")}else cur=tst});
+  if(cur.trim())lines.push(cur.trim());
+  var lh=fs*1.4,h=Math.max(lines.length,1)*lh+2;
+  c.width=Math.ceil(maxW*z);c.height=Math.ceil(h*z);x=c.getContext("2d");x.scale(z,z);x.font=f;x.fillStyle=col||"#111";x.textBaseline="top";
+  lines.forEach(function(l,i){x.fillText(l,0,i*lh+1)});
+  return{u:c.toDataURL("image/png"),w:maxW,h:h}
+}
+async function pdf(sh,pre){
+  try{
+    var J=window.jspdf&&window.jspdf.jsPDF;
+    if(!J)throw new Error("pdf");
+    if(!dl&&window.claude)dl=await useCap("downloads");
+    await mjReady();
+    var d=new J({unit:"pt",format:"a4"}),PW=595,PH=842,M=48,LW=170,y=M;
+    var cl=function(s){return String(s||"").replace(/[^ -~]/g,"")};
+    var room=function(n){if(y+n>PH-M){d.addPage();y=M}};
+    d.setFont("helvetica","bold");d.setFontSize(20);d.setTextColor(20);
+    if(NA.test(sh.title||"")){var ti=txtPng(sh.title,20,PW-2*M,"#141414");d.addImage(ti.u,"PNG",M,y,ti.w,ti.h);y+=ti.h+24}else{d.text(cl(sh.title)||"Notes",M,y+14);y+=40}
+    for(var s of sh.sections||[]){
+      room(48);d.setFont("helvetica","bold");d.setFontSize(12);d.setTextColor(10,110,150);d.setDrawColor(10,110,150);
+      if(NA.test(s.h||"")){var hi=txtPng(s.h,12,PW-2*M,"#0a6e96");d.addImage(hi.u,"PNG",M,y,hi.w,hi.h);d.line(M,y+hi.h+4,PW-M,y+hi.h+4);y+=hi.h+18}else{d.text(cl(s.h).toUpperCase(),M,y+10);d.line(M,y+16,PW-M,y+16);y+=30}
+      for(var it of s.items||[]){
+        var im=null;if(it.t){try{im=await texPng(it.t,17)}catch(e){}}
+        var mw=PW-2*M-LW,sc=im?Math.min(1,mw/im.w):1,fh=im?im.h*sc:0;
+        var nt=it.n?txtPng(it.n,10,mw,"#333"):null,lb=NA.test(it.l||"")?txtPng(it.l,10,LW-12,"#555"):null;
+        var h=Math.max(fh+(nt?nt.h+(fh?4:0):0),lb?lb.h:16,16)+10;
+        room(h);
+        if(lb)d.addImage(lb.u,"PNG",M,y+5,lb.w,lb.h);else{d.setFont("helvetica","normal");d.setFontSize(10);d.setTextColor(90);d.text(d.splitTextToSize(cl(it.l),LW-12),M,y+13)}
+        if(im)d.addImage(im.u,"PNG",M+LW,y+5,im.w*sc,im.h*sc);
+        if(nt)d.addImage(nt.u,"PNG",M+LW,y+5+fh+(fh?4:0),nt.w,nt.h);
+        y+=h
+      }
+      y+=8
+    }
+    var np=d.getNumberOfPages();
+    for(var p=1;p<=np;p++){d.setPage(p);d.setFont("helvetica","normal");d.setFontSize(8);d.setTextColor(140);d.text("Bujji notes  |  page "+p+" of "+np,M,PH-24)}
+    var nm=(cl(sh.title).replace(/[^a-zA-Z0-9 ]+/g,"").trim().replace(/ +/g,"-")||"bujji-notes").toLowerCase()+".pdf";
+    reply((pre?pre+" ":"")+"Downloading your PDF.");
+    if(dl)await dl.save({filename:nm,data:d.output("blob")});
+    else d.save(nm);
+  }catch(e){
+    var cd=e&&e.code;
+    reply(cd==="declined"?"No problem, cancelled.":"I couldn't generate that PDF.")
+  }
+}
+
+/* ---------- Settings & Personalization Modal ---------- */
+var modal=document.getElementById("modal"),cfgBtn=document.getElementById("cfgBtn");
+var mProv=document.getElementById("mProv"),mKey=document.getElementById("mKey"),mMod=document.getElementById("mMod");
+var mName=document.getElementById("mName"),mTone=document.getElementById("mTone"),mAbout=document.getElementById("mAbout"),mVoice=document.getElementById("mVoice");
+var provHint=document.getElementById("provHint"),memBox=document.getElementById("memBox"),statusMsg=document.getElementById("statusMsg");
+
+var HINTS={
+  gemini:'Free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> (no credit card needed).',
+  groq:'Fast free key at <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a>.',
+  openrouter:'Get a key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>.',
+  openai:'Get a key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>.'
+};
+function updateHint(){provHint.innerHTML=HINTS[mProv.value]||""}
+function renderMem(){
+  var m=MEM();
+  memBox.textContent=m.length?m.map(function(x,i){return(i+1)+". "+x}).join("\n"):"No saved memories yet. Bujji learns your preferences as you chat.";
+}
+function syncBadge(){
+  var k=KEY();
+  cfgBtn.classList.toggle("need",!(k&&k.k));
+  cfgBtn.textContent=(k&&k.k)?"⚙ Setup":"⚙ Add API Key";
+}
+function openModal(){
+  var k=KEY()||{p:"gemini",k:"",m:""},p=PROF();
+  mProv.value=k.p||"gemini";mKey.value=k.k||"";mMod.value=k.m||"";
+  mName.value=p.name||"";mTone.value=p.tone||"warm";mAbout.value=p.about||"";mVoice.value=GEN;
+  statusMsg.textContent="";
+  updateHint();renderMem();
+  modal.hidden=false;
+}
+cfgBtn.addEventListener("click",function(e){e.stopPropagation();openModal()});
+mProv.addEventListener("change",function(){updateHint();mMod.value=""});
+["pointerdown","touchstart","click","keydown"].forEach(function(ev){
+  modal.addEventListener(ev,function(e){e.stopPropagation()});
+  cfgBtn.addEventListener(ev,function(e){e.stopPropagation()});
+});
+document.getElementById("mClose").addEventListener("click",function(){modal.hidden=true});
+document.getElementById("mTest").addEventListener("click",async function(){
+  var key=mKey.value.trim(),prov=mProv.value;
+  if(!key){statusMsg.style.color="#ffb8a8";statusMsg.textContent="Paste an API key first.";return}
+  statusMsg.style.color="#9fefff";statusMsg.textContent="Checking key and detecting model…";
+  try{
+    var mod=await detectModel(prov,key);
+    mMod.value=mod;
+    statusMsg.style.color="#8fffa8";statusMsg.textContent="Connected! Selected model: "+mod;
+  }catch(e){
+    statusMsg.style.color="#ffb8a8";statusMsg.textContent="Could not verify key ("+((e&&e.message)||e)+").";
+  }
+});
+document.getElementById("mSave").addEventListener("click",function(){
+  var key=mKey.value.trim();
+  if(key)jset("jk",{p:mProv.value,k:key,m:mMod.value.trim()});
+  else try{localStorage.removeItem("jk")}catch(e){}
+  jset("jp",{name:mName.value.trim(),tone:mTone.value,about:mAbout.value.trim()});
+  GEN=mVoice.value;try{localStorage.setItem("jg",GEN)}catch(e){}
+  syncBadge();modal.hidden=true;
+  var p=PROF();
+  reply(key?(p.name?"Saved, "+p.name+". I'm ready whenever you are.":"Saved. I'm ready whenever you are."):"Preferences saved. Add an API key anytime to chat.");
+});
+document.getElementById("clrMem").addEventListener("click",function(){jset("jm",[]);renderMem();statusMsg.style.color="#9fefff";statusMsg.textContent="Memories cleared."});
+document.getElementById("clrHist").addEventListener("click",function(){hist=[];jset("jh",[]);statusMsg.style.color="#9fefff";statusMsg.textContent="Conversation history cleared."});
+syncBadge();
+
+/* ---------- Voice input ---------- */
+var dict=null,unlocked=false,buf="",bt,live=false,retry=0,LANG="";
+try{LANG=localStorage.getItem("jl")||""}catch(e){}
+var STOP=/^(stop|quiet|silence|shut up|enough|cancel|ruko|bas|चुप|रुको|बस|ఆపు|ఆపండి|நிறுத்து|நிறுத்துங்கள்|ನಿಲ್ಲಿಸು|നിർത്തൂ|থামো|থামুন|para|arrête|stopp)$/i;
+var LANGS=[["","Auto"],["en","English"],["hi","हिन्दी"],["te","తెలుగు"],["ta","தமிழ்"],["kn","ಕನ್ನಡ"],["ml","മലയാളം"],["bn","বাংলা"],["mr","मराठी"],["gu","ગુજરાતી"],["pa","ਪੰਜਾਬੀ"],["ur","اردو"],["es","Español"],["fr","Français"],["de","Deutsch"],["pt","Português"],["it","Italiano"],["ru","Русский"],["zh","中文"],["ja","日本語"],["ko","한국어"],["ar","العربية"],["tr","Türkçe"]];
+var sel=document.getElementById("lang");
+LANGS.forEach(function(l){var o=document.createElement("option");o.va
